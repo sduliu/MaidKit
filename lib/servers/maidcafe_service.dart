@@ -1862,7 +1862,7 @@ ProcessHistorySample? _parseProcessHistorySample(Map<String, dynamic> json) {
 
 RuntimeGroup? _parseSseRuntimeGroup(Map<String, dynamic> json) {
   final rawKind = _optionalString(json, 'runtime');
-  final kind = rawKind == null ? null : RuntimeKindFromWire(rawKind);
+  final kind = rawKind == null ? null : runtimeKindFromWire(rawKind);
   if (kind == null) return null;
   final processes = <RuntimeProcessInfo>[];
   final rawProcesses = json['processes'];

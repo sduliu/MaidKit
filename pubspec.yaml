@@ -34,6 +34,10 @@ dependencies:
   auto_route: ^11.1.0
   archive: ^4.1.0
   async: ^2.13.1
+  # Imported directly by cloud_sync_service, connection_import_adapters and
+  # database_backup_service. It was only ever present transitively, so a
+  # dependency bump upstream could have removed it out from under them.
+  crypto: ^3.0.7
   cryptography: ^2.9.0
   dart_ping: ^10.0.1
   dartssh2: ^3.3.1

@@ -14,6 +14,7 @@ import 'package:maid_kit/data/local/app_database.dart';
 import 'package:maid_kit/github/github_workflow_strip.dart';
 import 'package:maid_kit/shared/presentation/app_scaffold.dart';
 import 'package:maid_kit/shared/presentation/collapsible_section.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'package:maid_kit/snippets/snippet_repository.dart';
 import 'server_connection_actions.dart';
 import 'dashboard_runtimes_section.dart';
@@ -1254,62 +1255,42 @@ class _ConnectionStatus extends StatelessWidget {
   final bool failed;
   final Duration? networkLatency;
 
+  /// A reachable host with a 250ms round trip is not "healthy" in any sense
+  /// the user cares about, so it reports as degraded rather than staying green
+  /// with quiet grey text beside it. The old 100ms middle tier is gone: it only
+  /// recoloured the number, which is not a signal anyone reads, and most WAN
+  /// hosts sit above it permanently.
+  static const _degradedMs = 250;
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final latency = networkLatency;
 
-    if (connected) {
-      final latencyColor = latency == null
-          ? colorScheme.onSurfaceVariant
-          : latency.inMilliseconds >= 250
-          ? colorScheme.error
-          : latency.inMilliseconds >= 100
-          ? colorScheme.tertiary
-          : colorScheme.onSurfaceVariant;
-      return Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'serversNetworkPingTooltip'.tr(),
-            child: Text(
-              latency == null ? '—' : '${latency.inMilliseconds} ms',
-              style: textTheme.labelLarge?.copyWith(color: latencyColor),
-            ),
-          ),
-        ],
-      );
+    // `connecting` wins over `failed`: a retry in flight is what the user is
+    // waiting on, and the previous failure is already history by then.
+    if (!connected) {
+      final state = connecting
+          ? MaidKitConnState.connecting
+          : failed
+          ? MaidKitConnState.failed
+          : MaidKitConnState.offline;
+      final label = switch (state) {
+        MaidKitConnState.connecting => 'serversConnecting'.tr(),
+        MaidKitConnState.failed => 'serversFailed'.tr(),
+        _ => 'serversNotConnected'.tr(),
+      };
+      return MaidKitStatusLabel(state: state, label: label);
     }
 
-    final (label, color) = switch ((connecting, failed)) {
-      (true, _) => ('serversConnecting'.tr(), colorScheme.tertiary),
-      (_, true) => ('serversFailed'.tr(), colorScheme.error),
-      _ => ('serversNotConnected'.tr(), colorScheme.onSurfaceVariant),
-    };
+    final ms = latency?.inMilliseconds;
+    final state = ms != null && ms >= _degradedMs
+        ? MaidKitConnState.degraded
+        : MaidKitConnState.online;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: textTheme.labelLarge?.copyWith(color: colorScheme.onSurface),
-        ),
-      ],
+    return MaidKitStatusLabel(
+      state: state,
+      label: latency == null ? '—' : '$ms ms',
+      tooltip: 'serversNetworkPingTooltip'.tr(),
     );
   }
 }

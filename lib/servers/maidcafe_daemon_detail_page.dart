@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:maid_kit/theme.dart';
 import 'package:maid_kit/shared/presentation/app_scaffold.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'maidcafe_service.dart';
 import 'server_providers.dart';
 
@@ -191,12 +192,14 @@ class _ContainerTile extends StatelessWidget {
     ].join(' · ');
     return ListTile(
       leading: Container(
-        width: 8,
-        height: 8,
         margin: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
-          color: container.running ? colors.primary : colors.error,
-          shape: BoxShape.circle,
+        child: MaidKitStatusDot(
+          // A stopped container is stopped, not broken. It reported error red
+          // before, which put a deliberate `docker stop` in the same visual
+          // class as a crash.
+          state: container.running
+              ? MaidKitConnState.online
+              : MaidKitConnState.offline,
         ),
       ),
       title: Text(

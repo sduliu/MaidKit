@@ -1435,6 +1435,7 @@
   "serversMoveUp": "上移",
   "serversNetworkPingTooltip": "到伺服器的直接 ICMP 往返延遲；使用代理或跳板主機時不可用。",
   "serversNoMatches": "沒有匹配當前篩選條件的伺服器。",
+  "serversNoMatchesHint": "清除搜尋內容，或換一個標籤。",
   "serversNotConnected": "未連線",
   "serversReconnectAll": "全部重連",
   "serversSearchHint": "依名稱、地址或標籤搜尋伺服器",

@@ -1481,6 +1481,7 @@
   "serversMoveUp": "上移",
   "serversNetworkPingTooltip": "到服务器的直接 ICMP 往返延迟；使用代理或跳板机时不可用。",
   "serversNoMatches": "没有匹配当前筛选条件的服务器。",
+  "serversNoMatchesHint": "清除搜索内容，或换一个标签。",
   "serversNotConnected": "未连接",
   "serversReconnectAll": "全部重连",
   "serversSearchHint": "按名称、地址或标签搜索服务器",

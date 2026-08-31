@@ -13,6 +13,7 @@ import 'package:maid_kit/data/local/app_database.dart';
 import 'package:maid_kit/containers/container_management_tab.dart';
 import 'package:maid_kit/containers/image_management_tab.dart';
 import 'package:maid_kit/shared/presentation/app_context_menu.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'package:maid_kit/shared/presentation/icon_label_tab.dart';
 import 'package:maid_kit/shared/presentation/maidkit_alert.dart';
 import 'activity_tab.dart';
@@ -1048,7 +1049,7 @@ class _ServerIdentity extends ConsumerWidget {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _StatusChip(connected: connected, status: session?.status),
+                  _StatusChip(status: session?.status),
                   if (session?.stats?.updatedAt != null)
                     Text(
                       'detailUpdated'.tr(
@@ -1069,63 +1070,20 @@ class _ServerIdentity extends ConsumerWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.connected, required this.status});
+  const _StatusChip({required this.status});
 
-  final bool connected;
   final SessionStatus? status;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (label, color, bg) = switch (status) {
-      SessionStatus.connected => (
-        'commonConnected'.tr(),
-        scheme.onSecondaryContainer,
-        scheme.secondaryContainer,
-      ),
-      SessionStatus.connecting => (
-        'commonConnecting'.tr(),
-        scheme.onTertiaryContainer,
-        scheme.tertiaryContainer,
-      ),
-      SessionStatus.failed => (
-        'commonFailed'.tr(),
-        scheme.onErrorContainer,
-        scheme.errorContainer,
-      ),
-      _ => (
-        'commonNotConnected'.tr(),
-        scheme.onSurfaceVariant,
-        scheme.surfaceContainerHighest,
-      ),
+    final state = maidKitConnStateOfSession(status);
+    final label = switch (state) {
+      MaidKitConnState.online => 'commonConnected'.tr(),
+      MaidKitConnState.connecting => 'commonConnecting'.tr(),
+      MaidKitConnState.failed => 'commonFailed'.tr(),
+      _ => 'commonNotConnected'.tr(),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: connected ? scheme.primary : color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: color),
-          ),
-        ],
-      ),
-    );
+    return MaidKitStatusChip(state: state, label: label);
   }
 }
 

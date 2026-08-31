@@ -14,6 +14,8 @@ import 'package:maid_kit/data/local/app_database.dart';
 import 'package:maid_kit/github/github_workflow_strip.dart';
 import 'package:maid_kit/shared/presentation/app_scaffold.dart';
 import 'package:maid_kit/shared/presentation/collapsible_section.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
+import 'package:maid_kit/theme.dart';
 import 'package:maid_kit/snippets/snippet_repository.dart';
 import 'server_connection_actions.dart';
 import 'dashboard_runtimes_section.dart';
@@ -847,14 +849,44 @@ class _ServerDragFeedback extends StatelessWidget {
   }
 }
 
+/// Shown when a filter matches nothing.
+///
+/// Was a bare line of grey text pinned to the top-left of an otherwise blank
+/// area, which reads as a rendering failure rather than an answer. It now
+/// occupies the space it was given and says what to do about it.
 class _NoServersMatch extends StatelessWidget {
   const _NoServersMatch();
 
   @override
-  Widget build(BuildContext context) => Text(
-    'serversNoMatches'.tr(),
-    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(MaidKitSpace.xxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Symbols.filter_list_off,
+            size: 32,
+            color: context.scheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: MaidKitSpace.md),
+          Text(
+            'serversNoMatches'.tr(),
+            textAlign: TextAlign.center,
+            style: context.type.titleSmall?.copyWith(
+              color: context.scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: MaidKitSpace.xs),
+          Text(
+            'serversNoMatchesHint'.tr(),
+            textAlign: TextAlign.center,
+            style: context.type.bodySmall?.copyWith(
+              color: context.scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -953,15 +985,57 @@ class _ServerCard extends ConsumerWidget {
     final connecting = session?.status == SessionStatus.connecting;
     final failed = session?.status == SessionStatus.failed;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        // The local machine has no SSH details page; its actions live on the
-        // card itself (terminal, files, refresh).
-        onTap: isLocal ? null : onOpenDetail,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: compact ? 8 : 12),
+    // The card's own edge carries the state. Previously it was legible only by
+    // reading the dot in the footer, so a grid of a dozen hosts gave no signal
+    // until you scanned each one; a host that had dropped looked like a host
+    // that was fine. The local machine is exempt because it is never down and
+    // a permanent green stripe would just be decoration.
+    final state = isLocal
+        ? null
+        : connecting
+        ? MaidKitConnState.connecting
+        : failed
+        ? MaidKitConnState.failed
+        : connected
+        ? MaidKitConnState.online
+        : MaidKitConnState.offline;
+    final edge = state == null
+        ? null
+        : MaidKitConnStyle.of(context, state).color;
+
+    return AnimatedContainer(
+      duration: MaidKitMotion.normal,
+      curve: MaidKitMotion.standard,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(MaidKitRadius.lg),
+        border: Border(
+          left: BorderSide(
+            // Only a state worth reacting to gets a saturated edge. A healthy
+            // host stays quiet: if every card shouts, none of them do.
+            color: switch (state) {
+              MaidKitConnState.failed ||
+              MaidKitConnState.degraded => edge!,
+              MaidKitConnState.connecting => edge!.withValues(alpha: 0.7),
+              MaidKitConnState.online => edge!.withValues(alpha: 0.45),
+              _ => context.semantics.hairlineStrong,
+            },
+            width: switch (state) {
+              MaidKitConnState.failed || MaidKitConnState.degraded => 3,
+              null => 0,
+              _ => 2,
+            },
+          ),
+        ),
+      ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          // The local machine has no SSH details page; its actions live on the
+          // card itself (terminal, files, refresh).
+          onTap: isLocal ? null : onOpenDetail,
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: compact ? 8 : 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1083,15 +1157,10 @@ class _ServerCard extends ConsumerWidget {
                         onPressed: onConnect,
                         child: Text('serversConnect'.tr()),
                       ),
-                    if (connecting)
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colorScheme.primary,
-                        ),
-                      ),
+                    // No spinner here: _ConnectionStatus already pulses its dot
+                    // and reads "Connecting", so the spinner said the same
+                    // thing a third time and gave the busiest state the most
+                    // visual noise on the card.
                   ],
                 ),
               ),
@@ -1104,7 +1173,8 @@ class _ServerCard extends ConsumerWidget {
                   onOpenFiles: connecting || isSerial ? null : onOpenFiles,
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1254,62 +1324,42 @@ class _ConnectionStatus extends StatelessWidget {
   final bool failed;
   final Duration? networkLatency;
 
+  /// A reachable host with a 250ms round trip is not "healthy" in any sense
+  /// the user cares about, so it reports as degraded rather than staying green
+  /// with quiet grey text beside it. The old 100ms middle tier is gone: it only
+  /// recoloured the number, which is not a signal anyone reads, and most WAN
+  /// hosts sit above it permanently.
+  static const _degradedMs = 250;
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final latency = networkLatency;
 
-    if (connected) {
-      final latencyColor = latency == null
-          ? colorScheme.onSurfaceVariant
-          : latency.inMilliseconds >= 250
-          ? colorScheme.error
-          : latency.inMilliseconds >= 100
-          ? colorScheme.tertiary
-          : colorScheme.onSurfaceVariant;
-      return Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'serversNetworkPingTooltip'.tr(),
-            child: Text(
-              latency == null ? '—' : '${latency.inMilliseconds} ms',
-              style: textTheme.labelLarge?.copyWith(color: latencyColor),
-            ),
-          ),
-        ],
-      );
+    // `connecting` wins over `failed`: a retry in flight is what the user is
+    // waiting on, and the previous failure is already history by then.
+    if (!connected) {
+      final state = connecting
+          ? MaidKitConnState.connecting
+          : failed
+          ? MaidKitConnState.failed
+          : MaidKitConnState.offline;
+      final label = switch (state) {
+        MaidKitConnState.connecting => 'serversConnecting'.tr(),
+        MaidKitConnState.failed => 'serversFailed'.tr(),
+        _ => 'serversNotConnected'.tr(),
+      };
+      return MaidKitStatusLabel(state: state, label: label);
     }
 
-    final (label, color) = switch ((connecting, failed)) {
-      (true, _) => ('serversConnecting'.tr(), colorScheme.tertiary),
-      (_, true) => ('serversFailed'.tr(), colorScheme.error),
-      _ => ('serversNotConnected'.tr(), colorScheme.onSurfaceVariant),
-    };
+    final ms = latency?.inMilliseconds;
+    final state = ms != null && ms >= _degradedMs
+        ? MaidKitConnState.degraded
+        : MaidKitConnState.online;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: textTheme.labelLarge?.copyWith(color: colorScheme.onSurface),
-        ),
-      ],
+    return MaidKitStatusLabel(
+      state: state,
+      label: latency == null ? '—' : '$ms ms',
+      tooltip: 'serversNetworkPingTooltip'.tr(),
     );
   }
 }
@@ -1324,32 +1374,58 @@ class _DisconnectedStats extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final semantics = context.semantics;
+
+    // An SSH failure used to render exactly like the neutral "connect to view
+    // stats" placeholder: same grey, same weight, same icon. "Connection
+    // refused" is the most actionable thing the card can tell you, and it was
+    // styled as filler.
+    final hasError = !connecting && error != null && error!.isNotEmpty;
     final message = connecting
         ? 'serversEstablishingSession'.tr()
         : (error ?? 'serversConnectToViewStats'.tr());
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
+        color: hasError
+            ? semantics.offlineSurface
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(MaidKitRadius.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: MaidKitSpace.md,
+          vertical: MaidKitSpace.lg,
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              connecting ? Symbols.hourglass_top : Symbols.insights,
+              hasError
+                  ? Symbols.error
+                  : connecting
+                  ? Symbols.hourglass_top
+                  : Symbols.insights,
               size: 20,
-              color: colorScheme.onSurfaceVariant,
+              fill: hasError ? 1 : 0,
+              color: hasError ? semantics.offline : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: MaidKitSpace.md),
             Expanded(
-              child: Text(
+              child: SelectableText(
                 message,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                // Monospace for the error only. These strings are verbatim
+                // server output — "kex_exchange_identification", a port, a
+                // path — and setting them in prose type invites reading them
+                // as a sentence. Selectable so the text can be searched for
+                // instead of retyped from a screenshot.
                 style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: hasError
+                      ? semantics.offline
+                      : colorScheme.onSurfaceVariant,
+                  fontFamily: hasError ? MaidKitFonts.mono : null,
+                  height: hasError ? 1.35 : null,
                 ),
               ),
             ),

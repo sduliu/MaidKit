@@ -18,6 +18,7 @@ import 'package:maid_kit/shared/services/analytics_service.dart';
 import 'package:styled_widget/styled_widget.dart';
 
 import 'cloud_sync_service.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'maidcafe_connect.dart';
 import 'maidcafe_metoer.dart';
 import 'maidcafe_service.dart';
@@ -1388,17 +1389,12 @@ class _DaemonFleetCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: disconnected
-                        ? colors.error
-                        : enabled
-                        ? colors.primary
-                        : colors.outline,
-                    shape: BoxShape.circle,
-                  ),
+                MaidKitStatusDot(
+                  state: disconnected
+                      ? MaidKitConnState.failed
+                      : enabled
+                      ? MaidKitConnState.online
+                      : MaidKitConnState.offline,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1841,11 +1837,7 @@ class _MetricLegend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        MaidKitSeriesSwatch(color: color, size: 7),
         const SizedBox(width: 5),
         Text(
           label,

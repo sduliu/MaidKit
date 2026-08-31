@@ -13,6 +13,7 @@ import 'package:maid_kit/shared/presentation/maidkit_alert.dart';
 import 'database_models.dart';
 import 'maidcafe_service.dart';
 import 'maidcafe_session_registry.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'maidcafe_stream.dart';
 import 'server_connection_actions.dart';
 import 'server_models.dart';
@@ -1326,51 +1327,18 @@ class _RunningChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (label, color, background) = switch (running) {
-      true => (
-        'dbStatusRunning'.tr(),
-        scheme.onSecondaryContainer,
-        scheme.secondaryContainer,
-      ),
-      false => (
-        'dbStatusStopped'.tr(),
-        scheme.onErrorContainer,
-        scheme.errorContainer,
-      ),
-      null => (
-        'dbStatusUnknown'.tr(),
-        scheme.onSurfaceVariant,
-        scheme.surfaceContainerHighest,
-      ),
+    // Stopped is not broken: error red belonged to a real fault, not to a
+    // service someone turned off. But enabled-and-stopped is a service that is
+    // supposed to be up and isn't, which is worth distinguishing from one that
+    // was disabled deliberately. `enabled` was already carried into this widget
+    // and never read; this is what it was for.
+    final (label, state) = switch ((running, enabled)) {
+      (true, _) => ('dbStatusRunning'.tr(), MaidKitConnState.online),
+      (false, true) => ('dbStatusStopped'.tr(), MaidKitConnState.degraded),
+      (false, _) => ('dbStatusStopped'.tr(), MaidKitConnState.offline),
+      (null, _) => ('dbStatusUnknown'.tr(), MaidKitConnState.offline),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: running == true ? scheme.primary : color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: color),
-          ),
-        ],
-      ),
-    );
+    return MaidKitStatusChip(state: state, label: label);
   }
 }
 

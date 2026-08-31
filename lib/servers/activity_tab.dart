@@ -9,6 +9,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:maid_kit/data/local/app_database.dart';
 import 'activity_models.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
+import 'package:maid_kit/theme.dart';
 import 'server_providers.dart';
 import 'server_models.dart';
 import 'maidcafe_stream.dart';
@@ -711,15 +713,10 @@ class _ChartCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                // A legend swatch, not a status dot. Squared off so it does not
+                // read as connection state, which is what the circle implied.
+                MaidKitSeriesSwatch(color: color),
+                const SizedBox(width: MaidKitSpace.sm),
                 Text(title, style: theme.textTheme.titleSmall),
                 const Spacer(),
                 Flexible(child: trailing),
@@ -768,15 +765,8 @@ class _DiskCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: scheme.outline,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                MaidKitSeriesSwatch(color: scheme.outline),
+                const SizedBox(width: MaidKitSpace.sm),
                 Text(
                   showAll ? 'detailDisks'.tr() : 'detailRootDisk'.tr(),
                   style: theme.textTheme.titleSmall,

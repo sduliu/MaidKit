@@ -58,8 +58,16 @@ class MaidTermSessionAdapter implements TerminalSessionAdapter {
     bool selectToCopyEnabled = false,
     bool shiftInsertPasteEnabled = true,
     bool keywordHighlightEnabled = true,
+       // prefer_initializing_formals wants `this._shiftInsertPasteEnabled`
+       // here, but a named parameter cannot start with an underscore. Taking
+       // the advice would mean making these positional and breaking every
+       // caller, to hide three fields that are deliberately private with a
+       // public parameter name.
+       // ignore: prefer_initializing_formals
   }) : _selectToCopyEnabled = selectToCopyEnabled,
+       // ignore: prefer_initializing_formals
        _shiftInsertPasteEnabled = shiftInsertPasteEnabled,
+       // ignore: prefer_initializing_formals
        _keywordHighlightEnabled = keywordHighlightEnabled,
        _controller = maidterm.TerminalController(
          config: maidterm.TerminalConfig(

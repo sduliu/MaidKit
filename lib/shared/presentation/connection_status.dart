@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../servers/server_models.dart';
 import '../../theme.dart';
 
 /// What a host or service is currently doing.
@@ -24,6 +25,21 @@ enum MaidKitConnState {
   /// Unreachable because something went wrong.
   failed,
 }
+
+/// Maps the SSH session lifecycle onto the presentation state.
+///
+/// Lives here so the mapping is made once. Every page that showed session
+/// status had its own switch, and they disagreed: some treated `closed` as a
+/// failure, others as idle.
+MaidKitConnState maidKitConnStateOfSession(SessionStatus? status) =>
+    switch (status) {
+      SessionStatus.connected => MaidKitConnState.online,
+      SessionStatus.connecting => MaidKitConnState.connecting,
+      SessionStatus.failed => MaidKitConnState.failed,
+      // A closed session was deliberately ended. That is idle, not broken.
+      SessionStatus.closed => MaidKitConnState.offline,
+      null => MaidKitConnState.offline,
+    };
 
 /// Resolved presentation for one [MaidKitConnState].
 @immutable

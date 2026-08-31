@@ -215,7 +215,16 @@ class CloudSyncService {
        _storage = secureStorage ?? const FlutterSecureStorage(),
        _dio = dio ?? Dio();
 
-  static const apiBase = 'https://api.solian.app';
+  // Solar Network API root. Overridable at build time so a self-hosted
+  // Stargate/Valve deployment can be used instead of the official network:
+  //   flutter build windows --dart-define=SOLAR_API_BASE_URL=https://host:port
+  // Must not end in a slash; every call site concatenates '$apiBase$path'.
+  // A self-hosted value has to serve /.well-known/openid-configuration, since
+  // _discover() reads the authorization and token endpoints from it.
+  static const apiBase = String.fromEnvironment(
+    'SOLAR_API_BASE_URL',
+    defaultValue: 'https://api.solian.app',
+  );
   // Flywheel app namespace for vault blobs. Keep stable: changing it orphans
   // every existing blob and makes syncs 409 against the old revision. The
   // MaidCafe Metoer notifications use their own maidCafeMetoerAppId.

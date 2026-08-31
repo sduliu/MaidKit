@@ -9,6 +9,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:maid_kit/data/local/app_database.dart';
 import 'activity_models.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'package:maid_kit/theme.dart';
 import 'server_providers.dart';
 import 'server_models.dart';

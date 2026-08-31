@@ -93,6 +93,30 @@ class MaidKitConnStyle {
   }
 }
 
+/// Identifies which metric series a chart or legend refers to.
+///
+/// A rounded square, deliberately not a circle. Circles mean connection state
+/// everywhere else in the app, and the chart cards were borrowing that
+/// vocabulary to label a data series — so a CPU legend looked like a host that
+/// was up. Lives beside [MaidKitStatusDot] because the whole point is that the
+/// two must not be confusable.
+class MaidKitSeriesSwatch extends StatelessWidget {
+  const MaidKitSeriesSwatch({super.key, required this.color, this.size = 8});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
+}
+
 /// The status dot.
 ///
 /// Deliberately not animated on its own. A pulsing dot on every row of a host

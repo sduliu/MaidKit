@@ -11,7 +11,9 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:maid_kit/data/local/app_database.dart';
 import 'package:maid_kit/shared/presentation/app_scaffold.dart';
+import 'package:maid_kit/shared/presentation/connection_status.dart';
 import 'package:maid_kit/snippets/snippet_repository.dart';
+import 'package:maid_kit/theme.dart';
 import 'server_connection_actions.dart';
 import 'server_detail_page.dart';
 import 'maidcafe_server_tab.dart';
@@ -1449,27 +1451,25 @@ class _StatusBarIdentity extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final (label, color) = switch (session.status) {
-      SessionStatus.connected => ('commonConnected'.tr(), scheme.primary),
-      SessionStatus.connecting => ('commonConnecting'.tr(), scheme.tertiary),
-      SessionStatus.failed => ('commonFailed'.tr(), scheme.error),
-      SessionStatus.closed => (
-        'commonNotConnected'.tr(),
-        scheme.onSurfaceVariant,
-      ),
+    final state = maidKitConnStateOfSession(session.status);
+    final label = switch (state) {
+      MaidKitConnState.online => 'commonConnected'.tr(),
+      MaidKitConnState.connecting => 'commonConnecting'.tr(),
+      MaidKitConnState.failed => 'commonFailed'.tr(),
+      _ => 'commonNotConnected'.tr(),
     };
+    final style = MaidKitConnStyle.of(context, state);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        MaidKitStatusDot(state: state, size: 7),
+        const SizedBox(width: MaidKitSpace.sm),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(color: style.color),
         ),
-        const SizedBox(width: 8),
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color)),
-        const SizedBox(width: 8),
+        const SizedBox(width: MaidKitSpace.sm),
         Text(
           session.serverName,
           style: theme.textTheme.labelSmall?.copyWith(

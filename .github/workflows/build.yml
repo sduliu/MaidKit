@@ -62,7 +62,30 @@ jobs:
         with:
           version: 0.16.0
       - run: dart run build_runner build --delete-conflicting-outputs
-      - run: flutter build windows --release --verbose --dart-define=DISTRIBUTION_API_BASE_URL="${{ vars.DISTRIBUTION_API_BASE_URL }}" --dart-define=DISTRIBUTION_PRODUCT_ID="${{ vars.DISTRIBUTION_PRODUCT_ID }}"
+      # A --dart-define with an empty value still counts as "defined", so it
+      # overrides the String.fromEnvironment defaultValue with an empty string.
+      # vars/secrets are unset on forks, so each define is only passed when it
+      # actually has a value. SOLAR_API_BASE_URL points CloudSyncService at a
+      # self-hosted Stargate instead of api.solian.app; leave it unset to build
+      # against the official Solar Network.
+      - name: Build Windows release
+        shell: bash
+        env:
+          DISTRIBUTION_API_BASE_URL: ${{ vars.DISTRIBUTION_API_BASE_URL }}
+          DISTRIBUTION_PRODUCT_ID: ${{ vars.DISTRIBUTION_PRODUCT_ID }}
+          SOLAR_API_BASE_URL: ${{ secrets.SOLAR_API_BASE_URL }}
+        run: |
+          defines=()
+          for key in DISTRIBUTION_API_BASE_URL DISTRIBUTION_PRODUCT_ID SOLAR_API_BASE_URL; do
+            value="${!key}"
+            if [ -n "$value" ]; then
+              defines+=("--dart-define=$key=$value")
+              echo "passing $key"
+            else
+              echo "skipping $key (unset)"
+            fi
+          done
+          flutter build windows --release --verbose "${defines[@]}"
       - name: Extract Version
         id: extract_version
         run: |

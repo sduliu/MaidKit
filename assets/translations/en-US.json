@@ -1482,6 +1482,7 @@
   "serversMoveUp": "Move up",
   "serversNetworkPingTooltip": "Direct ICMP round-trip time to the server; unavailable through a proxy or jump host.",
   "serversNoMatches": "No servers match the current filter.",
+  "serversNoMatchesHint": "Clear the search or pick a different tag.",
   "serversNotConnected": "Not connected",
   "serversReconnectAll": "Reconnect all",
   "serversSearchHint": "Search servers by name, address, or tag",

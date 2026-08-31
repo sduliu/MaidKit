@@ -849,14 +849,44 @@ class _ServerDragFeedback extends StatelessWidget {
   }
 }
 
+/// Shown when a filter matches nothing.
+///
+/// Was a bare line of grey text pinned to the top-left of an otherwise blank
+/// area, which reads as a rendering failure rather than an answer. It now
+/// occupies the space it was given and says what to do about it.
 class _NoServersMatch extends StatelessWidget {
   const _NoServersMatch();
 
   @override
-  Widget build(BuildContext context) => Text(
-    'serversNoMatches'.tr(),
-    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(MaidKitSpace.xxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Symbols.filter_list_off,
+            size: 32,
+            color: context.scheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: MaidKitSpace.md),
+          Text(
+            'serversNoMatches'.tr(),
+            textAlign: TextAlign.center,
+            style: context.type.titleSmall?.copyWith(
+              color: context.scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: MaidKitSpace.xs),
+          Text(
+            'serversNoMatchesHint'.tr(),
+            textAlign: TextAlign.center,
+            style: context.type.bodySmall?.copyWith(
+              color: context.scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1344,32 +1374,58 @@ class _DisconnectedStats extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final semantics = context.semantics;
+
+    // An SSH failure used to render exactly like the neutral "connect to view
+    // stats" placeholder: same grey, same weight, same icon. "Connection
+    // refused" is the most actionable thing the card can tell you, and it was
+    // styled as filler.
+    final hasError = !connecting && error != null && error!.isNotEmpty;
     final message = connecting
         ? 'serversEstablishingSession'.tr()
         : (error ?? 'serversConnectToViewStats'.tr());
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
+        color: hasError
+            ? semantics.offlineSurface
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(MaidKitRadius.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: MaidKitSpace.md,
+          vertical: MaidKitSpace.lg,
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              connecting ? Symbols.hourglass_top : Symbols.insights,
+              hasError
+                  ? Symbols.error
+                  : connecting
+                  ? Symbols.hourglass_top
+                  : Symbols.insights,
               size: 20,
-              color: colorScheme.onSurfaceVariant,
+              fill: hasError ? 1 : 0,
+              color: hasError ? semantics.offline : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: MaidKitSpace.md),
             Expanded(
-              child: Text(
+              child: SelectableText(
                 message,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+                // Monospace for the error only. These strings are verbatim
+                // server output — "kex_exchange_identification", a port, a
+                // path — and setting them in prose type invites reading them
+                // as a sentence. Selectable so the text can be searched for
+                // instead of retyped from a screenshot.
                 style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: hasError
+                      ? semantics.offline
+                      : colorScheme.onSurfaceVariant,
+                  fontFamily: hasError ? MaidKitFonts.mono : null,
+                  height: hasError ? 1.35 : null,
                 ),
               ),
             ),
